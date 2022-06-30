@@ -41,9 +41,19 @@ const get_single = async (project_id, collection_name) => {
 }
 
 const insert_new = async (data, collection_name) => {
-    const connection = data.id !== "null" ? firebase_db.collection(collection_name).doc(data.id) : firebase_db.collection(collection_name).doc();
+    let response;
+    if(data.id !== "null"){
+        response = await firebase_db.collection(collection_name).doc(data.id).set(data.project_data);
+    } else{
+        response = await firebase_db.collection(collection_name).add(data.project_data);
+    }
 
-    const response = await connection.set(data.project_data);
+    return response;
+}
+
+const delete_project = async (collection_name, document_id) => {
+    const response = await firebase_db.collection(collection_name).doc(document_id).delete();
+
     return response;
 }
 
@@ -61,9 +71,10 @@ app.get("/project/:id", (req, res) => {
 app.post("/project/new", (req, res) => {
     const body = req.body;
 
-    insert_new(body, PROJECT_COLLECTION_NAME).then(() => {
+    insert_new(body, PROJECT_COLLECTION_NAME).then((response) => {
         res.json({
             success: true,
+            project_id: response.id,
             body: "Data posted successfully"
         })
     }).catch((response) => {
@@ -74,6 +85,24 @@ app.post("/project/new", (req, res) => {
         })
     });
 });
+
+
+app.delete("/project/delete/:id", (req, res) => {
+    const document_id = req.params.id;
+
+    delete_project(PROJECT_COLLECTION_NAME, document_id).then(() => {
+        res.json({
+            success: true,
+            body: "Data deleted successfully"
+        })
+    }).catch((response) => {
+        console.log(response);
+        res.json({
+            success: false,
+            body: "Unable to delete data"
+        })
+    });
+})
 
 app.get("/information/all", (req, res) => {
     get_all(INFORMATION_COLLECTION_NAME).then(response => {
